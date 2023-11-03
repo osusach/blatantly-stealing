@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "playwright": "^1.39.0"
+  },
+  "devDependencies": {
+    "tsx": "^3.12.2"
+  }
+}
