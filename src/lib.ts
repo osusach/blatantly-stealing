@@ -78,6 +78,13 @@ export async function classifyJob(offer: {
           "ingeniería de software",
           "remunerado",
           "computacion",
+          "informática",
+          "Ingeniería en Computación",
+          "Civil Informático",
+          "Software engineering",
+          "Programación",
+          "Developer",
+          "Desarrollador",
         ].some((keyword) => tag.includes(keyword))
     );
     const cleanedOffer = {

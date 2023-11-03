@@ -1,6 +1,7 @@
 import { stealJobOffers, classifyJob } from "./lib";
 
 async function app() {
+  // no es robar si es un telegram publico, uwu
   console.log("💰 stealing from the rich...");
   const offers = await stealJobOffers();
   console.log("💰 hehe, found", offers.length, "jobs");
