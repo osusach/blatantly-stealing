@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 import { SYSTEM_INSTRUCTIONS } from "./vars";
+import { pipe } from "fp-ts/function";
 
 export async function stealJobOffers() {
   const browser = await chromium.launch();
@@ -57,45 +58,22 @@ export async function classifyJob(offer: {
       }
     );
 
-    const rawResponse = (await response.json()).result.response as string;
-    const jsonResponse = rawResponse.substring(
-      rawResponse.indexOf("{"),
-      rawResponse.lastIndexOf("}") + 1
+    const result = pipe(
+      (await response.json()).result.response as string,
+      (result) =>
+        result.substring(result.indexOf("{"), result.lastIndexOf("}") + 1),
+      (result) => JSON.parse(result),
+      (result) => ({
+        company: result.company,
+        salary: result.salary,
+        date: offer.date,
+        tech: result.tech,
+        tags: result.tags,
+        content: offer.content,
+      })
     );
-    const parsedOffer = JSON.parse(jsonResponse);
-    parsedOffer.tags = parsedOffer.tags.filter(
-      (tag) =>
-        ![
-          "Software",
-          "Engineer",
-          "technology",
-          "engineering",
-          "development",
-          "innovation",
-          "ingenieria",
-          "informatica",
-          "práctica profesional",
-          "ingeniería de software",
-          "remunerado",
-          "computacion",
-          "informática",
-          "Ingeniería en Computación",
-          "Civil Informático",
-          "Software engineering",
-          "Programación",
-          "Developer",
-          "Desarrollador",
-        ].some((keyword) => tag.includes(keyword))
-    );
-    const cleanedOffer = {
-      company: parsedOffer.company,
-      salary: parsedOffer.salary,
-      date: offer.date,
-      tech: parsedOffer.tech,
-      tags: parsedOffer.tags,
-      content: offer.content,
-    };
-    return cleanedOffer;
+
+    return result;
   } catch (error) {
     console.error("🍺 scheisse, llama did something stupid", error);
     return null;

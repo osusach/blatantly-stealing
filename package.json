@@ -3,6 +3,7 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
+    "fp-ts": "^2.16.1",
     "playwright": "^1.39.0"
   },
   "devDependencies": {
