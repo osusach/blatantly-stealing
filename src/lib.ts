@@ -1,8 +1,7 @@
+import { pipe } from "fp-ts/lib/function";
 import { chromium } from "playwright";
-import { SYSTEM_INSTRUCTIONS } from "./vars";
-import { pipe } from "fp-ts/function";
 
-export async function stealJobOffers() {
+export async function getOffersFromTelegram() {
   const browser = await chromium.launch();
 
   const context = await browser.newContext();
@@ -18,12 +17,19 @@ export async function stealJobOffers() {
       )
     );
     return posts.map((post) => ({
-      date:
+      id: post
+        .querySelector(
+          ".tgme_widget_message.text_not_supported_wrap.js-widget_message"
+        )!
+        .getAttribute("data-post"),
+      date: new Date(
         post.querySelector(".tgme_widget_message_service_date")?.innerHTML +
-        ", " +
-        year,
+          ", " +
+          year
+      ),
       content: post.querySelector(".tgme_widget_message_text.js-message_text")
         ?.innerHTML,
+      source: "TELEGRAM_DCC",
     }));
   });
 
@@ -33,49 +39,43 @@ export async function stealJobOffers() {
   return offers;
 }
 
-export async function classifyJob(offer: {
-  date: string;
-  content: string | undefined;
-}) {
-  try {
-    const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACCOUNT_ID}/ai/run/@cf/meta/llama-2-7b-chat-int8`,
-      {
-        headers: { Authorization: `Bearer ${process.env.CF_AI_TOKEN}` },
-        method: "POST",
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content: SYSTEM_INSTRUCTIONS,
-            },
-            {
-              role: "user",
-              content: `Classify this offer: ${offer.content} `,
-            },
-          ],
-        }),
-      }
-    );
+export async function getJobsFromPage(page: number) {
+  return pipe(
+    await fetch(
+      `https://www.getonbrd.com/api/v0/categories/programming/jobs?page=${page}&country_code=CL`
+    ),
+    async (result) => await result.json()
+  );
+}
 
-    const result = pipe(
-      (await response.json()).result.response as string,
-      (result) =>
-        result.substring(result.indexOf("{"), result.lastIndexOf("}") + 1),
-      (result) => JSON.parse(result),
-      (result) => ({
-        company: result.company,
-        salary: result.salary,
-        date: offer.date,
-        tech: result.tech,
-        tags: result.tags,
-        content: offer.content,
+export async function getOffersFromGetonboard() {
+  const firstPage = await getJobsFromPage(1);
+  const entryJobs = (
+    await Promise.all(
+      numberToArray(firstPage.meta.total_pages).map(async (page) => {
+        const { data } = await getJobsFromPage(page);
+        // modality 4 = internship, seniortiy 1 = no experience required
+        const internships = data.filter(
+          (offer) =>
+            offer.attributes.modality.data.id === 4 ||
+            offer.attributes.seniority.data.id === 1
+        );
+
+        return internships.map((offer) => ({
+          id: offer.id,
+          date: new Date(offer.attributes.published_at * 1000),
+          content: `${offer.attributes.title} <br /> ${offer.attributes.description} <br /> ${offer.attributes.functions} <br /> ${offer.attributes.desirable} <br /> ${offer.attributes.benefits}`,
+          source: "GETONBOARD_CHILE",
+        }));
       })
-    );
+    )
+  ).flat(Infinity);
 
-    return result;
-  } catch (error) {
-    console.error("🍺 scheisse, llama did something stupid", error);
-    return null;
-  }
+  return entryJobs;
+}
+
+function numberToArray(number: number) {
+  const array = [...Array(number + 1).keys()];
+  array.shift(); // remove 0
+  return array;
 }
