@@ -3,8 +3,10 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
+    "@libsql/client": "^0.3.6",
     "fp-ts": "^2.16.1",
-    "playwright": "^1.39.0"
+    "playwright": "^1.39.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "tsx": "^3.12.2"

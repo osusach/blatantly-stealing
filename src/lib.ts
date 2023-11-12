@@ -22,11 +22,11 @@ export async function getOffersFromTelegram() {
           ".tgme_widget_message.text_not_supported_wrap.js-widget_message"
         )!
         .getAttribute("data-post"),
-      date: new Date(
+      date: `${new Date(
         post.querySelector(".tgme_widget_message_service_date")?.innerHTML +
           ", " +
           year
-      ),
+      )}`,
       content: post.querySelector(".tgme_widget_message_text.js-message_text")
         ?.innerHTML,
       source: "TELEGRAM_DCC",
@@ -53,20 +53,23 @@ export async function getOffersFromGetonboard() {
   const entryJobs = (
     await Promise.all(
       numberToArray(firstPage.meta.total_pages).map(async (page) => {
-        const { data } = await getJobsFromPage(page);
         // modality 4 = internship, seniortiy 1 = no experience required
-        const internships = data.filter(
-          (offer) =>
-            offer.attributes.modality.data.id === 4 ||
-            offer.attributes.seniority.data.id === 1
+        return pipe(
+          await getJobsFromPage(page),
+          (x) =>
+            x.data.filter(
+              (offer) =>
+                offer.attributes.modality.data.id === 4 ||
+                offer.attributes.seniority.data.id === 1
+            ),
+          (x) =>
+            x.map((offer) => ({
+              id: offer.id,
+              date: new Date(offer.attributes.published_at * 1000),
+              content: `${offer.attributes.title} <br /> ${offer.attributes.description} <br /> ${offer.attributes.functions} <br /> ${offer.attributes.desirable} <br /> ${offer.attributes.benefits}`,
+              source: "GETONBOARD_CHILE",
+            }))
         );
-
-        return internships.map((offer) => ({
-          id: offer.id,
-          date: new Date(offer.attributes.published_at * 1000),
-          content: `${offer.attributes.title} <br /> ${offer.attributes.description} <br /> ${offer.attributes.functions} <br /> ${offer.attributes.desirable} <br /> ${offer.attributes.benefits}`,
-          source: "GETONBOARD_CHILE",
-        }));
       })
     )
   ).flat(Infinity);
