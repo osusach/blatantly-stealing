@@ -15,22 +15,22 @@ const OfferSchema = z
   .array();
 
 function sendOffers(offers: z.infer<typeof OfferSchema>, client: Client) {
-  return TE.tryCatch(
-    async () =>
-      await Promise.allSettled(
-        offers.map(
-          async (offer) =>
-            await client.execute({
-              sql: "INSERT INTO offers (id, date, content, source)",
-              args: [offer.id, offer.date, offer.content, offer.source],
-            })
-        )
-      ),
-    TE.left("Something failed in db statement")
-  );
+  return TE.tryCatch(async () => {
+    const promises = offers.map(
+      async (offer) =>
+        await client.execute({
+          sql: "INSERT INTO goodies values (?, ?, ?, ?)",
+          args: [
+            offer.id,
+            offer.date.toDateString(),
+            offer.content,
+            offer.source,
+          ],
+        })
+    );
+    return await Promise.allSettled(promises);
+  }, TE.left("Something failed in db statement"));
 }
-
-const validateOffersSchema = E.tryCatchK(OfferSchema.parse, E.toError);
 
 async function saveOffers(getOffers: () => Promise<any>, client: Client) {
   return await pipe(
@@ -38,7 +38,7 @@ async function saveOffers(getOffers: () => Promise<any>, client: Client) {
     TE.flatMap((x) =>
       pipe(
         x,
-        E.tryCatchK(OfferSchema.parse, () => E.left("Failed to parse")),
+        E.tryCatchK(OfferSchema.parse, (x) => E.left("Failed to parse")),
         TE.fromEither
       )
     ),
@@ -61,14 +61,14 @@ async function saveOffers(getOffers: () => Promise<any>, client: Client) {
 }
 
 async function app() {
-  // TODO agregar los datos a esta cosa
+  console.log("hands up, this is a robbery");
   const client = createClient({
-    url: "libsql://your-database.turso.io",
-    authToken: "your-auth-token",
+    url: process.env.TURSO_URL!,
+    authToken: process.env.TURSO_TOKEN,
   });
-
-  console.log(await saveOffers(getOffersFromGetonboard, client));
-  console.log(await saveOffers(getOffersFromTelegram, client));
+  await saveOffers(getOffersFromGetonboard, client);
+  await saveOffers(getOffersFromTelegram, client);
+  console.log("and we are done, now go find a job");
 }
 
 app();

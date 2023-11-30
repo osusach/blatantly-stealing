@@ -22,11 +22,11 @@ export async function getOffersFromTelegram() {
           ".tgme_widget_message.text_not_supported_wrap.js-widget_message"
         )!
         .getAttribute("data-post"),
-      date: `${new Date(
+      date: new Date(
         post.querySelector(".tgme_widget_message_service_date")?.innerHTML +
           ", " +
           year
-      )}`,
+      ),
       content: post.querySelector(".tgme_widget_message_text.js-message_text")
         ?.innerHTML,
       source: "TELEGRAM_DCC",
@@ -35,7 +35,6 @@ export async function getOffersFromTelegram() {
 
   await context.close();
   await browser.close();
-
   return offers;
 }
 
@@ -73,7 +72,6 @@ export async function getOffersFromGetonboard() {
       })
     )
   ).flat(Infinity);
-
   return entryJobs;
 }
 
