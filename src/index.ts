@@ -4,12 +4,26 @@ import { identity, pipe } from "fp-ts/lib/function";
 import * as E from "fp-ts/Either";
 import * as TE from "fp-ts/TaskEither";
 import { Client, createClient } from "@libsql/client";
+import keywordList from "./keywordList";
+
+const GetKeywords = (content: string) => {
+  const keywords: string[] = [];
+  const text = content.toLowerCase();
+  
+  keywordList.forEach(word => {
+    if (text.includes(word.toLowerCase())) {
+      keywords.push(word);
+    }
+  });
+  return keywords;
+}
 
 const OfferSchema = z
   .object({
     id: z.string(),
     date: z.date(),
     content: z.string(),
+    keywords: z.array(z.string()),
     source: z.enum(["TELEGRAM_DCC", "GETONBOARD_CHILE"]),
   })
   .array();
@@ -24,6 +38,7 @@ function sendOffers(offers: z.infer<typeof OfferSchema>, client: Client) {
             offer.id,
             offer.date.toDateString(),
             offer.content,
+            GetKeywords(offer.content),
             offer.source,
           ],
         })
