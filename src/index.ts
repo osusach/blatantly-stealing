@@ -15,7 +15,8 @@ const GetKeywords = (content: string) => {
       keywords.push(word);
     }
   });
-  return keywords;
+    
+  return keywords.join(";");
 }
 
 const OfferSchema = z
@@ -23,17 +24,19 @@ const OfferSchema = z
     id: z.string(),
     date: z.date(),
     content: z.string(),
-    keywords: z.array(z.string()),
+    keywords: z.string(),
     source: z.enum(["TELEGRAM_DCC", "GETONBOARD_CHILE"]),
   })
   .array();
 
 function sendOffers(offers: z.infer<typeof OfferSchema>, client: Client) {
+  console.log("sending offers");
+  
   return TE.tryCatch(async () => {
     const promises = offers.map(
       async (offer) =>
         await client.execute({
-          sql: "INSERT INTO goodies values (?, ?, ?, ?)",
+          sql: "INSERT INTO goodies values (?, ?, ?, ?, ?)",
           args: [
             offer.id,
             offer.date.toDateString(),
@@ -48,6 +51,8 @@ function sendOffers(offers: z.infer<typeof OfferSchema>, client: Client) {
 }
 
 async function saveOffers(getOffers: () => Promise<any>, client: Client) {
+  console.log("getting offers");
+  
   return await pipe(
     TE.tryCatch(getOffers, TE.left("Didn't recieve offers")),
     TE.flatMap((x) =>
@@ -77,6 +82,7 @@ async function saveOffers(getOffers: () => Promise<any>, client: Client) {
 
 async function app() {
   console.log("hands up, this is a robbery");
+  
   const client = createClient({
     url: process.env.TURSO_URL!,
     authToken: process.env.TURSO_TOKEN,

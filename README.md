@@ -18,6 +18,7 @@ CREATE TABLE goodies (
     id TEXT PRIMARY KEY,
     date TEXT,
     content TEXT,
+    keywords TEXT,
     source TEXT
 );
 ```

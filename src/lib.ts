@@ -2,13 +2,14 @@ import { pipe } from "fp-ts/lib/function";
 import { chromium } from "playwright";
 
 export async function getOffersFromTelegram() {
+  
   const browser = await chromium.launch();
 
   const context = await browser.newContext();
 
   const page = await context.newPage();
   await page.goto("https://t.me/s/DCCEmpleo");
-
+  
   const offers = await page.evaluate(() => {
     const year = new Date().getFullYear();
     const posts = Object.values(
@@ -16,6 +17,7 @@ export async function getOffersFromTelegram() {
         ".tgme_widget_message_wrap.js-widget_message_wrap"
       )
     );
+    
     return posts.map((post) => ({
       id: post
         .querySelector(
@@ -29,12 +31,14 @@ export async function getOffersFromTelegram() {
       ),
       content: post.querySelector(".tgme_widget_message_text.js-message_text")
         ?.innerHTML,
+      keywords: "",
       source: "TELEGRAM_DCC",
     }));
   });
 
   await context.close();
   await browser.close();
+  console.log(offers);
   return offers;
 }
 
@@ -66,12 +70,14 @@ export async function getOffersFromGetonboard() {
               id: offer.id,
               date: new Date(offer.attributes.published_at * 1000),
               content: `${offer.attributes.title} <br /> ${offer.attributes.description} <br /> ${offer.attributes.functions} <br /> ${offer.attributes.desirable} <br /> ${offer.attributes.benefits}`,
+              keywords: "",
               source: "GETONBOARD_CHILE",
             }))
         );
       })
     )
   ).flat(Infinity);
+  
   return entryJobs;
 }
 
