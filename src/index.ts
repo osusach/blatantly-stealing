@@ -15,7 +15,7 @@ const GetKeywords = (content: string) => {
       keywords.push(word);
     }
   });
-  return keywords;
+  return keywords.join(",");
 }
 
 const OfferSchema = z
@@ -23,7 +23,6 @@ const OfferSchema = z
     id: z.string(),
     date: z.date(),
     content: z.string(),
-    keywords: z.array(z.string()),
     source: z.enum(["TELEGRAM_DCC", "GETONBOARD_CHILE"]),
   })
   .array();
@@ -33,7 +32,7 @@ function sendOffers(offers: z.infer<typeof OfferSchema>, client: Client) {
     const promises = offers.map(
       async (offer) =>
         await client.execute({
-          sql: "INSERT INTO goodies values (?, ?, ?, ?)",
+          sql: "INSERT INTO goodies (id, date, content, keywords, source) values (?, ?, ?, ?, ?)",
           args: [
             offer.id,
             offer.date.toDateString(),
