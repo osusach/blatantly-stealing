@@ -8,6 +8,7 @@ ofertas de la gente del dcc y de getonboard
 - bun
 - tursodb
 - playwright
+- zod
 
 # setup
 
