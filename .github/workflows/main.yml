@@ -1,8 +1,13 @@
 name: Stealing
 on: push
 
+env:
+  TURSO_URL: ${{secrets.TURSO_URL}}
+  TURSO_TOKEN: ${{secrets.TURSO_TOKEN}}
+
 jobs:
   scrape:
+    
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
