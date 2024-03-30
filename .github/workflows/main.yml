@@ -1,15 +1,27 @@
 name: Stealing
-on: push
-
+on:
+  schedule:
+    - cron: '0 * * * *'
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    environment: stealing
+    env:
+        TURSO_URL: ${{ secrets.TURSO_URL }}
+        TURSO_TOKEN: ${{ secrets.TURSO_TOKEN }}
+        TEST_VAR: HOLA
     steps:
+    - name: Secrets test
+      run: |
+        echo "El env es ${{ vars.ENV_TEST }}"
+        echo "El TEST es ${{ env.TEST_VAR }}"
+        echo "el TEST es $TEST_VAR"
     - uses: actions/checkout@v3
     - uses: oven-sh/setup-bun@v1.2.0
     - name: Install dependencies
-      run: sudo bun install
+      run: bun install
     - name: Install browser
-      run: sudo bunx playwright install --with-deps chromium
+      run: bunx playwright install --with-deps chromium
     - name: execute
+      
       run: bun run src/index.ts
