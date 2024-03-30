@@ -80,8 +80,11 @@ async function app() {
     url: process.env.TURSO_URL!,
     authToken: process.env.TURSO_TOKEN,
   });
-  await saveOffers(getOffersFromGetonboard, client);
-  await saveOffers(getOffersFromTelegram, client);
+  const gnbOffers = await saveOffers(getOffersFromGetonboard, client);
+  const telegramOffers = await saveOffers(getOffersFromTelegram, client);
+
+  console.log(gnbOffers)
+  console.log(telegramOffers)
   console.log("and we are done, now go find a job");
 }
 
