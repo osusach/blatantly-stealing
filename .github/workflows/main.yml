@@ -1,7 +1,5 @@
 name: Stealing
-on:
-  schedule:
-    - cron: '0,15,30,45 * * * *' # Ejecuta cada hora
+on: push
 
 jobs:
   scrape:
