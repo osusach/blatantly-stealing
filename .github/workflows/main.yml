@@ -10,6 +10,8 @@ jobs:
     
     runs-on: ubuntu-latest
     steps:
+    - name: Secrets test
+      run: echo "La url es ${{secrets.TURSO_URL}}"
     - uses: actions/checkout@v3
     - uses: oven-sh/setup-bun@v1.2.0
     - name: Install dependencies
