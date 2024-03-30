@@ -5,8 +5,8 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
     - uses: oven-sh/setup-bun@v1.2.0
+    - uses: actions/checkout@v3
     - name: Install dependencies
       run: sudo bun install
     - name: Install browser
