@@ -5,6 +5,7 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
+    - uses: actions/checkout@v4
     - uses: oven-sh/setup-bun@v1.2.0
     - name: Install dependencies
       run: sudo bun install
