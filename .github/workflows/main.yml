@@ -1,9 +1,6 @@
 name: Stealing
 on: push
 
-env:
-  TURSO_URL: ${{ secrets.TURSO_URL }}
-  TURSO_TOKEN: ${{ secrets.TURSO_TOKEN }}
 
 jobs:
   scrape:
@@ -19,4 +16,7 @@ jobs:
     - name: Install browser
       run: bunx playwright install --with-deps chromium
     - name: execute
+      env:
+        TURSO_URL: ${{ secrets.TURSO_URL }}
+        TURSO_TOKEN: ${{ secrets.TURSO_TOKEN }}
       run: bun run src/index.ts
