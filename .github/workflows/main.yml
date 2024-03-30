@@ -5,6 +5,7 @@ on: push
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    environment: stealing
     env:
         TURSO_URL: ${{ secrets.TURSO_URL }}
         TURSO_TOKEN: ${{ secrets.TURSO_TOKEN }}
