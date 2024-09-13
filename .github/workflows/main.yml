@@ -1,7 +1,5 @@
 name: Stealing
 on:
-  schedule:
-    - cron: '0 * * * *'
   push:
     branches:
       - main
