@@ -1,91 +1,72 @@
-import { z } from "zod";
-import { getOffersFromTelegram, getOffersFromGetonboard } from "./lib";
-import { identity, pipe } from "fp-ts/lib/function";
-import * as E from "fp-ts/Either";
-import * as TE from "fp-ts/TaskEither";
 import { Client, createClient } from "@libsql/client";
 import keywordList from "./keywordList";
+import { Job } from "./sources/schema";
+import { getEntryLevelJobsFromDCCTelegram } from "./sources/dcc";
+import { getEntryLevelJobsFromGetonboard } from "./sources/getonboard";
 
 const GetKeywords = (content: string) => {
   const keywords: string[] = [];
   const text = content.toLowerCase();
-  
-  keywordList.forEach(word => {
+
+  keywordList.forEach((word) => {
     if (text.includes(word.toLowerCase())) {
       keywords.push(word);
     }
   });
   return keywords.join(",");
-}
+};
 
-const OfferSchema = z
-  .object({
-    id: z.string(),
-    date: z.date(),
-    content: z.string(),
-    source: z.enum(["TELEGRAM_DCC", "GETONBOARD_CHILE"]),
-  })
-  .array();
-
-function sendOffers(offers: z.infer<typeof OfferSchema>, client: Client) {
-  return TE.tryCatch(async () => {
-    const promises = offers.map(
-      async (offer) =>
-        await client.execute({
-          sql: "INSERT INTO goodies (id, date, content, keywords, source) values (?, ?, ?, ?, ?)",
-          args: [
-            offer.id,
-            offer.date.toDateString(),
-            offer.content,
-            GetKeywords(offer.content),
-            offer.source,
-          ],
-        })
-    );
-    return await Promise.allSettled(promises);
-  }, TE.left("Something failed in db statement"));
-}
-
-async function saveOffers(getOffers: () => Promise<any>, client: Client) {
-  return await pipe(
-    TE.tryCatch(getOffers, TE.left("Didn't recieve offers")),
-    TE.flatMap((x) =>
-      pipe(
-        x,
-        E.tryCatchK(OfferSchema.parse, (x) => E.left("Failed to parse")),
-        TE.fromEither
-      )
-    ),
-    TE.flatMap((x) => sendOffers(x, client)),
-    TE.flatMap((x) =>
-      pipe(
-        x,
-        E.fromPredicate(
-          (x) => x.some((p) => p.status === "fulfilled"),
-          () => E.left("No new offer was inserted")
-        ),
-        TE.fromEither
-      )
-    ),
-    TE.matchW(
-      (x) => ({ success: false, message: identity(x) }),
-      (x) => ({ success: true, message: identity(x) })
-    )
-  )();
+async function saveJobs(jobs: Job[], client: Client) {
+  const promises = jobs.map(
+    async (o) =>
+      await client.execute({
+        sql: "INSERT INTO goodies (id, date, content, keywords, source) values (?, ?, ?, ?, ?)",
+        args: [
+          o.id,
+          o.date.toDateString(),
+          o.content,
+          GetKeywords(o.content),
+          o.source,
+        ],
+      })
+  );
+  const results = await Promise.allSettled(promises);
+  // find failed inserts
+  const rejectedInserts = results.filter(
+    (result) => result.status === "rejected"
+  );
+  return {
+    fulfilled: results.length - rejectedInserts.length,
+    rejected: rejectedInserts.length,
+  };
 }
 
 async function app() {
-  console.log("hands up, this is a robbery");
+  console.log("-------");
+  console.log("start");
+  console.log("-------");
   const client = createClient({
     url: process.env.TURSO_URL!,
     authToken: process.env.TURSO_TOKEN,
   });
-  const gnbOffers = await saveOffers(getOffersFromGetonboard, client);
-  const telegramOffers = await saveOffers(getOffersFromTelegram, client);
 
-  console.log(gnbOffers)
-  console.log(telegramOffers)
-  console.log("and we are done, now go find a job");
+  const dccJobs = await getEntryLevelJobsFromDCCTelegram();
+  console.log("found ", dccJobs.length, " jobs from dcc telegram");
+  const getonboardJobs = await getEntryLevelJobsFromGetonboard();
+  console.log("found ", getonboardJobs.length, " jobs from getonboard");
+
+  const jobs = [...dccJobs, ...getonboardJobs];
+  const results = await saveJobs(jobs, client);
+
+  console.log("-------");
+  console.log(
+    "fin, ",
+    results.fulfilled,
+    " jobs were added",
+    results.rejected,
+    " failed to be saved"
+  );
+  console.log("-------");
 }
 
 app();
