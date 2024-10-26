@@ -35,6 +35,7 @@ async function main() {
         " failed"
     );
   }
+  return;
 }
 
 main();
