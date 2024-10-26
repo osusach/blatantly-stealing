@@ -4,7 +4,8 @@
   },
   "dependencies": {
     "@libsql/client": "^0.3.6",
-    "fp-ts": "^2.16.1",
+    "eslint-plugin-neverthrow": "^1.1.4",
+    "neverthrow": "^8.1.0",
     "playwright": "^1.39.0",
     "zod": "^3.22.4"
   },

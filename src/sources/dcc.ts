@@ -1,7 +1,7 @@
 import { chromium } from "playwright";
 import type { Job } from "./schema";
 
-export async function getEntryLevelJobsFromDCCTelegram(): Promise<Job[]> {
+export async function getDccTelegramJobs(): Promise<Job[]> {
   const browser = await chromium.launch();
 
   const context = await browser.newContext();

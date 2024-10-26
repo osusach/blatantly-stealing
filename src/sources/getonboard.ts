@@ -1,6 +1,6 @@
 import type { Job } from "./schema";
 
-export async function getEntryLevelJobsFromGetonboard(): Promise<Job[]> {
+export async function getGetonboardJobs(): Promise<Job[]> {
   const { meta } = await getJobsFromGetonboard({ page: 1 });
   const pages = numberToArray(meta.total_pages);
   const promises = pages.map(async (page) => fetchEntryLevelJobs({ page }));
