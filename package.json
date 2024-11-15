@@ -4,8 +4,10 @@
   },
   "dependencies": {
     "@libsql/client": "^0.3.6",
+    "croner": "^9.0.0",
     "eslint-plugin-neverthrow": "^1.1.4",
     "neverthrow": "^8.1.0",
+    "pino": "^9.5.0",
     "playwright": "^1.39.0",
     "zod": "^3.22.4"
   },
