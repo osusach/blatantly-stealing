@@ -4,13 +4,13 @@ import { getGetonboardJobs } from "./sources/getonboard";
 import { save } from "./lib/save";
 import pino from "pino";
 
-const EVERY_DAY_AT_8AM = "0 8 * * *";
+const DAILY_AT_8AM = "0 8 * * *";
 const EVERY_5_SECONDS = "*/5 * * * * *";
 
 const logger = pino();
 
 async function app() {
-  new Cron(EVERY_DAY_AT_8AM, steal);
+  new Cron(EVERY_5_SECONDS, steal);
   // TODO: make a listener for telegram channel updates on dcc @panquequelol
 }
 
