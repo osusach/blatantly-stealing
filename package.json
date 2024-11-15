@@ -11,5 +11,6 @@
   },
   "devDependencies": {
     "tsx": "^3.12.2"
-  }
+  },
+  "packageManager": "^bun@1.1.34"
 }
