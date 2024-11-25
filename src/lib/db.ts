@@ -1,4 +1,4 @@
-import { createClient } from "@libsql/client";
+import { createClient } from "@libsql/client/web";
 import { Result } from "neverthrow";
 
 export const createConnection = Result.fromThrowable(() =>

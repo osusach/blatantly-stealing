@@ -1,4 +1,3 @@
-import { createClient } from "@libsql/client";
 import { Job } from "../sources/schema";
 import keywordList from "../keywordList";
 import { createConnection } from "./db";

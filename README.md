@@ -1,14 +1,6 @@
-# blatanly stealing stuff
+# osusach pegas
 
-ofertas de la gente del dcc y de getonboard
-
-# tech
-
-- ts
-- bun
-- tursodb
-- playwright
-- zod
+ladron de pegas usando bun + ts
 
 # setup
 
@@ -31,10 +23,9 @@ TURSO_URL=
 TURSO_TOKEN=
 ```
 
-and that's it
+# docker
 
-# usage
-
-1. `bun install`
-2. `bun start`
-3. wait for the magic to happen
+```zsh
+docker build --no-cache --pull -t pegas-osusach .
+docker run -p 3000:3000 --rm -it pegas-osusach
+```
