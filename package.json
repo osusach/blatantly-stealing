@@ -1,11 +1,12 @@
 {
   "scripts": {
-    "start": "tsx src/index.ts"
+    "start": "bun --env-file=.env src/server.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.3.6",
     "croner": "^9.0.0",
     "eslint-plugin-neverthrow": "^1.1.4",
+    "grammy": "^1.32.0",
     "neverthrow": "^8.1.0",
     "pino": "^9.5.0",
     "playwright": "^1.39.0",

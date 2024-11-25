@@ -10,7 +10,7 @@ RUN bun install --frozen-lockfile
 COPY src ./src
 
 # compile everything to a binary called cli which includes the bun runtime
-RUN bun build ./src/app.ts --compile --outfile cli
+RUN bun build ./src/server.ts --compile --outfile cli
 
 # use a smaller image without bun
 FROM ubuntu:22.04
