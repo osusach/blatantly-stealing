@@ -1,83 +1,110 @@
+import { match, P } from "ts-pattern";
 import { Offer, OfferSchema } from "../lib/db";
 import { shorten } from "../lib/shorten";
+import { fromAsyncThrowable } from "neverthrow";
+import { unknown } from "zod";
+import TurndownService from "turndown";
 
-export async function getGetonboardEntryLevelOffers({
-  mode,
-}: {
-  mode: "CHILE" | "REMOTE";
-}): Promise<Offer[]> {
-  const { meta } = await fetchOffers({ mode });
-  const pages = [...Array(meta.total_pages + 1).keys()];
-  pages.shift(); // removes index 0
+export async function getGetonboardEntryLevelOffers() {
+  const [programmingOffers, designOffers] = await Promise.all([
+    getEntryLevelJobsByCategory("programming"),
+    getEntryLevelJobsByCategory("design-ux"),
+  ]);
+  return [...programmingOffers, ...designOffers];
+}
 
-  const offerPromises = pages.map(async (page) => {
-    const jobs = await fetchOffers({ page, mode });
-    // modality 4 = internship, seniortiy 1 = no experience required
+async function getEntryLevelJobsByCategory(
+  category: "design-ux" | "programming"
+): Promise<Offer[]> {
+  const { meta } = await fetchOffersByPage(1, category);
+  const totalPages = [...Array(meta.total_pages + 1).keys()];
+  totalPages.shift(); // removes index 0
+
+  const everyEntryLevelOFferByPagePromise = totalPages.map(async (page) => {
+    const jobs = await fetchOffersByPage(page, category);
+    // modality 4 intern
+    // seniority 1 no experience
+    // seniority 2 junior
     const entryLevel = jobs.data
       .filter(
         (job: any) =>
-          job.attributes.modality.data.id === 4 ||
-          job.attributes.seniority.data.id === 1
+          (job.attributes.modality.data.id === 4 ||
+            job.attributes.seniority.data.id === 1 ||
+            job.attributes.seniority.data.id === 2) &&
+          (job.attributes.countries.includes("Chile") ||
+            job.attributes.remote_modality === "fully_remote")
       )
       .map(async (job: any) => {
-        const companyId = job.attributes.company.data.id;
-        const res = await fetch(
-          "https://www.getonbrd.com/api/v0/companies/" + companyId
+        const companyName = await fromAsyncThrowable(getCompanyName)(
+          job.attributes.company.data.id
         );
-        const data = await res.json();
-        return { ...job, fetched_company_name: data.data.attributes.name };
+        if (companyName.isErr()) return { ...job, fetched_company_name: null };
+        return { ...job, fetched_company_name: companyName.value };
       });
     return Promise.all(entryLevel);
   });
-  const formattedOffers = (await Promise.all(offerPromises)).flat(Infinity);
-  const entryLevelOffers = formattedOffers.map((job) => {
-    // design offers hav a different url
-    // job.data.attributes.category_name == "Programming" means /jobs/programacion/
-    const url = "https://www.getonbrd.cl/jobs/programacion/" + job.id;
+  const entryLevelOffers = (
+    await Promise.all(everyEntryLevelOFferByPagePromise)
+  ).flat(Infinity);
+  const validFormattedOffers = entryLevelOffers.map((job) => {
+    const url =
+      (job.attributes.category_name === "Programming"
+        ? "https://www.getonbrd.com/jobs/programming/"
+        : "https://www.getonbrd.com/jobs/design-ux/") + job.id;
     let location: string | null = null;
     if (job.attributes.remote_modality == "fully_remote") {
       location = "REMOTE";
     } else if (job.attributes.countries == "Chile") {
       location = "ONSITE";
     }
+    const turndownService = new TurndownService();
+    const markdownContent = turndownService.turndown(
+      job.attributes.description
+    );
     const offer = OfferSchema.safeParse({
       id: job.id,
       date: new Date(job.attributes.published_at * 1000),
-      content: shorten(job.attributes.description, 128),
+      content: shorten(markdownContent, 128),
       source: "GETONBOARD",
       title: job.attributes.title,
       company: job.fetched_company_name,
       url,
-      type: job.attributes.modality.data.id ? "INTERNSHIP" : "NEWGRAD",
+      ...(job.attributes.min_salary || job.attributes.max_salary
+        ? {
+            salary:
+              job.attributes.min_salary === job.attributes.max_salary
+                ? `$${job.attributes.min_salary} USD`
+                : `Entre $${job.attributes.min_salary} y $${job.attributes.max_salary} USD`,
+          }
+        : {}),
+      type: match<{ modality: number; seniority: number }>({
+        modality: job.attributes.modality.data.id,
+        seniority: job.attributes.seniority.data.id,
+      })
+        .with({ modality: 4 }, () => "INTERNSHIP")
+        .with({ seniority: 1 }, () => "NEWGRAD")
+        .with({ seniority: 2 }, () => "JUNIOR")
+        .otherwise(() => unknown),
       location:
         job.attributes.remote_modality == "fully_remote" ? "REMOTE" : "ONSITE",
     });
     return offer.success ? offer.data : null;
   });
-  return entryLevelOffers.filter((offer) => offer !== null);
+  return validFormattedOffers.filter((offer) => offer !== null);
 }
 
-async function fetchOffers(args: { page?: number; mode: "CHILE" | "REMOTE" }) {
-  const queryParams = new URLSearchParams();
-
-  if (args.page) queryParams.append("page", args.page.toString());
-
-  if (args.mode === "REMOTE") {
-    queryParams.append("remote", "true");
-  } else {
-    queryParams.append("country_code", "CL");
-  }
-
-  const url = `https://www.getonbrd.com/api/v0/categories/programming/jobs?${queryParams}`;
-  const res = await fetch(url);
+async function fetchOffersByPage(
+  page: number = 1,
+  category: "programming" | "design-ux" = "programming"
+) {
+  const res = await fetch(
+    `https://www.getonbrd.com/api/v0/categories/${category}/jobs?remote=true&page=${page}`
+  );
   return res.json();
 }
 
-(async () => {
-  // TODO: merge this 2, can have repeated offers but ids are unique, filter them.
-  // TODO: implement design offers
-  const offers1 = await getGetonboardEntryLevelOffers({ mode: "CHILE" });
-  const offers2 = await getGetonboardEntryLevelOffers({ mode: "REMOTE" });
-  console.log(offers1);
-  console.log(offers2);
-})();
+async function getCompanyName(id: string) {
+  const res = await fetch("https://www.getonbrd.com/api/v0/companies/" + id);
+  const data = await res.json();
+  return data.data.attributes.name;
+}

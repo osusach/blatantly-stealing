@@ -12,7 +12,7 @@ export const createConnection = Result.fromThrowable(() =>
 export const OfferSchema = z.object({
   id: z.string(),
   title: z.string(),
-  company: z.string(),
+  company: z.union([z.string(), z.null()]),
   content: z.string(),
   url: z.string(),
   type: z.union([
