@@ -15,6 +15,8 @@ async function cron() {
     return;
   }
 
+  console.log(jobs);
+
   const results = await save(jobs);
   if (results.isErr()) {
     console.error(`coudn't save new jobs, ${results.error}`);

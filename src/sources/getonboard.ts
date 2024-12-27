@@ -1,41 +1,83 @@
-import type { Job } from "./schema";
+import { Offer, OfferSchema } from "../lib/db";
+import { shorten } from "../lib/shorten";
 
-export async function getGetonboardJobs(): Promise<Job[]> {
-  const { meta } = await getJobsFromGetonboard({ page: 1 });
-  const pages = numberToArray(meta.total_pages);
-  const promises = pages.map(async (page) => fetchEntryLevelJobs({ page }));
-  // fetch all pages at the same time, more efficient
-  const jobs = (await Promise.all(promises)).flat(Infinity);
-  return jobs as Job[];
+export async function getGetonboardEntryLevelOffers({
+  mode,
+}: {
+  mode: "CHILE" | "REMOTE";
+}): Promise<Offer[]> {
+  const { meta } = await fetchOffers({ mode });
+  const pages = [...Array(meta.total_pages + 1).keys()];
+  pages.shift(); // removes index 0
+
+  const offerPromises = pages.map(async (page) => {
+    const jobs = await fetchOffers({ page, mode });
+    // modality 4 = internship, seniortiy 1 = no experience required
+    const entryLevel = jobs.data
+      .filter(
+        (job: any) =>
+          job.attributes.modality.data.id === 4 ||
+          job.attributes.seniority.data.id === 1
+      )
+      .map(async (job: any) => {
+        const companyId = job.attributes.company.data.id;
+        const res = await fetch(
+          "https://www.getonbrd.com/api/v0/companies/" + companyId
+        );
+        const data = await res.json();
+        return { ...job, fetched_company_name: data.data.attributes.name };
+      });
+    return Promise.all(entryLevel);
+  });
+  const formattedOffers = (await Promise.all(offerPromises)).flat(Infinity);
+  const entryLevelOffers = formattedOffers.map((job) => {
+    // design offers hav a different url
+    // job.data.attributes.category_name == "Programming" means /jobs/programacion/
+    const url = "https://www.getonbrd.cl/jobs/programacion/" + job.id;
+    let location: string | null = null;
+    if (job.attributes.remote_modality == "fully_remote") {
+      location = "REMOTE";
+    } else if (job.attributes.countries == "Chile") {
+      location = "ONSITE";
+    }
+    const offer = OfferSchema.safeParse({
+      id: job.id,
+      date: new Date(job.attributes.published_at * 1000),
+      content: shorten(job.attributes.description, 128),
+      source: "GETONBOARD",
+      title: job.attributes.title,
+      company: job.fetched_company_name,
+      url,
+      type: job.attributes.modality.data.id ? "INTERNSHIP" : "NEWGRAD",
+      location:
+        job.attributes.remote_modality == "fully_remote" ? "REMOTE" : "ONSITE",
+    });
+    return offer.success ? offer.data : null;
+  });
+  return entryLevelOffers.filter((offer) => offer !== null);
 }
 
-async function getJobsFromGetonboard({ page }: { page: number }) {
-  const res = await fetch(
-    `https://www.getonbrd.com/api/v0/categories/programming/jobs?page=${page}&country_code=CL`
-  );
-  const data = await res.json();
-  return data;
+async function fetchOffers(args: { page?: number; mode: "CHILE" | "REMOTE" }) {
+  const queryParams = new URLSearchParams();
+
+  if (args.page) queryParams.append("page", args.page.toString());
+
+  if (args.mode === "REMOTE") {
+    queryParams.append("remote", "true");
+  } else {
+    queryParams.append("country_code", "CL");
+  }
+
+  const url = `https://www.getonbrd.com/api/v0/categories/programming/jobs?${queryParams}`;
+  const res = await fetch(url);
+  return res.json();
 }
 
-function numberToArray(number: number) {
-  const array = [...Array(number + 1).keys()];
-  array.shift(); // remove 0
-  return array;
-}
-
-async function fetchEntryLevelJobs({ page }: { page: number }): Promise<Job[]> {
-  const jobs = await getJobsFromGetonboard({ page });
-  // modality 4 = internship, seniortiy 1 = no experience required
-  const entryLevelJobs = jobs.data.filter(
-    (job) =>
-      job.attributes.modality.data.id === 4 ||
-      job.attributes.seniority.data.id === 1
-  );
-  const formatted = entryLevelJobs.map((job) => ({
-    id: job.id,
-    date: new Date(job.attributes.published_at * 1000),
-    content: `${job.attributes.title} <br /> ${job.attributes.description} <br /> ${job.attributes.functions} <br /> ${job.attributes.desirable} <br /> ${job.attributes.benefits}`,
-    source: "GETONBOARD_CHILE",
-  }));
-  return formatted;
-}
+(async () => {
+  // TODO: merge this 2, can have repeated offers but ids are unique, filter them.
+  // TODO: implement design offers
+  const offers1 = await getGetonboardEntryLevelOffers({ mode: "CHILE" });
+  const offers2 = await getGetonboardEntryLevelOffers({ mode: "REMOTE" });
+  console.log(offers1);
+  console.log(offers2);
+})();
