@@ -1,9 +1,7 @@
-import { match, P } from "ts-pattern";
+import { match } from "ts-pattern";
 import { Offer, OfferSchema } from "../lib/db";
-import { shorten } from "../lib/shorten";
 import { fromAsyncThrowable } from "neverthrow";
 import { unknown } from "zod";
-import TurndownService from "turndown";
 
 export async function getGetonboardEntryLevelOffers() {
   const [programmingOffers, designOffers] = await Promise.all([
@@ -51,20 +49,9 @@ async function getEntryLevelJobsByCategory(
       (job.attributes.category_name === "Programming"
         ? "https://www.getonbrd.com/jobs/programming/"
         : "https://www.getonbrd.com/jobs/design-ux/") + job.id;
-    let location: string | null = null;
-    if (job.attributes.remote_modality == "fully_remote") {
-      location = "REMOTE";
-    } else if (job.attributes.countries == "Chile") {
-      location = "ONSITE";
-    }
-    const turndownService = new TurndownService();
-    const markdownContent = turndownService.turndown(
-      job.attributes.description
-    );
     const offer = OfferSchema.safeParse({
       id: job.id,
-      date: new Date(job.attributes.published_at * 1000),
-      content: shorten(markdownContent, 128),
+      published_at: new Date(job.attributes.published_at * 1000),
       source: "GETONBOARD",
       title: job.attributes.title,
       company: job.fetched_company_name,
@@ -77,12 +64,20 @@ async function getEntryLevelJobsByCategory(
                 : `Entre $${job.attributes.min_salary} y $${job.attributes.max_salary} USD`,
           }
         : {}),
-      type: match<{ modality: number; seniority: number }>({
+      seniority: match<{ modality: number; seniority: number; title: string }>({
         modality: job.attributes.modality.data.id,
         seniority: job.attributes.seniority.data.id,
+        title: job.attributes.title,
       })
-        .with({ modality: 4 }, () => "INTERNSHIP")
-        .with({ seniority: 1 }, () => "NEWGRAD")
+        .when(
+          ({ title }) =>
+            title.match(
+              /(Práctica|Practica|Practicante|Intern|Internship|Pasante|Trainee)/i
+            ),
+          () => "INTERNSHIP"
+        )
+        .with({ modality: 4 }, () => "NOEXPERIENCE")
+        .with({ seniority: 1 }, () => "NOEXPERIENCE")
         .with({ seniority: 2 }, () => "JUNIOR")
         .otherwise(() => unknown),
       location:

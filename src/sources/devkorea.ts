@@ -36,7 +36,7 @@ export async function getDevKoreaEntryLevelOffers(): Promise<Offer[]> {
         ),
         newPage.textContent("div.kYifnh"),
       ]);
-      const date = new Date();
+      const published_at = new Date();
       await newPage.close();
       return company == undefined || title == undefined || content == undefined
         ? undefined
@@ -44,10 +44,9 @@ export async function getDevKoreaEntryLevelOffers(): Promise<Offer[]> {
             id: url,
             company,
             title,
-            type: "INTERNSHIP",
-            content: shorten(content, 128),
+            seniority: "NOEXPERIENCE",
             url,
-            date,
+            published_at,
             location: "KOREA",
             source: "DEVKOREA",
           } as Offer);

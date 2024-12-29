@@ -1,7 +1,7 @@
 import { Bot } from "grammy";
 import { ResultAsync } from "neverthrow";
-import { jobSchema } from "../sources/schema";
 import { save } from "./save";
+import { OfferSchema } from "./db";
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 export async function unsafeDCCListener() {
@@ -9,7 +9,8 @@ export async function unsafeDCCListener() {
   const bot = new Bot(TOKEN);
   bot.on("channel_post", (ctx) => {
     if (ctx.chat.title === "DCCEmpleo") {
-      const job = jobSchema.safeParse({
+      // TODO: THIS IS LEGACY WON'T WORK, change when telegram works
+      const job = OfferSchema.safeParse({
         id: `${ctx.channelPost.message_id}_DCCEmpleo`,
         content: ctx.channelPost.text,
         date: new Date(

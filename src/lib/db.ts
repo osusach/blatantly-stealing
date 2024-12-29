@@ -13,13 +13,8 @@ export const OfferSchema = z.object({
   id: z.string(),
   title: z.string(),
   company: z.union([z.string(), z.null()]),
-  content: z.string(),
   url: z.string(),
-  type: z.union([
-    z.literal("NEWGRAD"),
-    z.literal("INTERNSHIP"),
-    z.literal("JUNIOR"),
-  ]),
+  seniority: z.union([z.literal("NOEXPERIENCE"), z.literal("JUNIOR")]),
   salary: z.string().optional(),
   // base location is Chile, remote means remote within Chile
   location: z.union([
@@ -28,7 +23,7 @@ export const OfferSchema = z.object({
     z.literal("REMOTE"),
     z.literal("ONSITE"),
   ]),
-  date: z.date(),
+  published_at: z.date(),
   source: z.union([
     z.literal("GETONBOARD"),
     z.literal("TOKYODEV"),
