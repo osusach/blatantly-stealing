@@ -1,5 +1,6 @@
 import { createConnection, type Offer } from "./db";
 import { err } from "neverthrow";
+import { doesTitleImplyNoExperience, formatCompanyName } from "./utils";
 
 export async function saveOffers(offers: Offer[]) {
   const conn = createConnection();
@@ -19,23 +20,53 @@ export async function saveOffers(offers: Offer[]) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-  const result = await conn.value.batch(
-    offers.map((offer) => ({
-      sql,
-      args: [
-        offer.id,
-        offer.title,
-        offer.company,
-        offer.url,
-        offer.seniority,
-        offer.salary || null,
-        offer.location,
-        offer.published_at,
-        offer.source,
-      ],
-    })),
-    "write"
-  );
+  let failed = 0;
+  let success = 0;
 
-  console.log(result.length, "offers saved");
+  for (const offer of offers) {
+    try {
+      await conn.value.execute({
+        sql,
+        args: [
+          offer.id,
+          offer.title,
+          formatCompanyName(offer.company),
+          offer.url,
+          doesTitleImplyNoExperience(offer.title)
+            ? "NOEXPERIENCE"
+            : offer.seniority,
+          offer.salary || null,
+          offer.location,
+          offer.published_at,
+          offer.source,
+        ],
+      });
+      success = success + 1;
+    } catch (error: any) {
+      if (!(error?.code === "SQLITE_CONSTRAINT")) {
+        console.log("======start======");
+        console.error(
+          [
+            offer.id,
+            offer.title,
+            formatCompanyName(offer.company),
+            offer.url,
+            doesTitleImplyNoExperience(offer.title)
+              ? "NOEXPERIENCE"
+              : offer.seniority,
+            offer.salary || null,
+            offer.location,
+            offer.published_at,
+            offer.source,
+          ],
+          error?.code
+        );
+        console.log("======end======");
+        failed = failed + 1;
+      }
+    }
+  }
+
+  console.log(`Offers saved: ${success}`);
+  console.log(`Offers failed: ${failed}`);
 }

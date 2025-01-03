@@ -1,12 +1,11 @@
 import { chromium, Page } from "playwright";
 import { Offer } from "../lib/db";
-import { shorten } from "../lib/shorten";
 
 const BASE_URL = "https://dev-korea.com";
 
 // NOTE
 // all selectors are unstable, if the site changes, this breaks
-export async function getDevKoreaEntryLevelOffers(): Promise<Offer[]> {
+export async function getDevkoreaEntryLevelOffers(): Promise<Offer[]> {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();

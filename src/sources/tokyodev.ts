@@ -1,13 +1,10 @@
-import { chromium } from "playwright-extra";
-import stealth from "puppeteer-extra-plugin-stealth";
+import { chromium } from "playwright";
 import { Offer } from "../lib/db";
 
 const BASE_URL = "https://www.tokyodev.com";
 
-chromium.use(stealth());
-
-export async function getTokyoDevEntryLevelJobs(): Promise<Offer[]> {
-  const browser = await chromium.launch({ headless: false });
+export async function getTokyodevEntryLevelJobs(): Promise<Offer[]> {
+  const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
 
@@ -30,30 +27,32 @@ export async function getTokyoDevEntryLevelJobs(): Promise<Offer[]> {
         const salaryTag = (
           offer.querySelector('a[href="/jobs/salary-data"]') as HTMLElement
         )?.innerText;
-        const salary = salaryTag ? salaryTag + " JPY" : undefined;
-        const title = offer.querySelector("h4")?.innerText;
-        const doesntRequireExperience = [
-          "intern",
-          "internship",
-          "new grad",
-          "new graduate",
-          "graduate",
-          "no experience",
-        ].some((word) => title?.toLowerCase().includes(word));
-        const url = (offer.querySelector("h4 > a") as HTMLAnchorElement)?.href;
         return {
-          id: url,
-          company: company.querySelector("h3")?.innerText,
-          title: offer.querySelector("h4")?.innerText,
-          location: "JAPAN",
-          published_at: new Date(),
-          seniority: doesntRequireExperience ? "NOEXPERIENCE" : "JUNIOR",
-          source: "TOKYODEV",
-          salary: salary,
-          url,
-        } as Offer;
+          company: company.querySelector("h3")!.innerText,
+          title: offer.querySelector("h4")!.innerText,
+          salary: salaryTag ? salaryTag + " JPY" : undefined,
+          url: (offer.querySelector("h4 > a") as HTMLAnchorElement)?.href,
+        };
       });
     })
   );
-  return offers.flat();
+  // to avoid dups, HENNGE offers are handled by japandev
+  const formated = offers
+    .flat()
+    .filter((offer) => offer.company !== "HENNGE")
+    .map(
+      (offer) =>
+        ({
+          id: offer.url,
+          title: offer.title,
+          company: offer.company,
+          url: offer.url,
+          seniority: "JUNIOR",
+          location: "JAPAN",
+          published_at: new Date(),
+          source: "TOKYODEV",
+          salary: offer.salary,
+        } as Offer)
+    );
+  return formated;
 }

@@ -1,6 +1,6 @@
 import { Bot } from "grammy";
 import { ResultAsync } from "neverthrow";
-import { save } from "./save";
+import { saveOffers } from "./save";
 import { OfferSchema } from "./db";
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
